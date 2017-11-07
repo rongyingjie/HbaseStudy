@@ -15,18 +15,19 @@ import org.springframework.context.ConfigurableApplicationContext;
 public class HbaseBeanScannerConfigure  implements BeanFactoryPostProcessor, ApplicationContextAware {
     private ApplicationContext applicationContext;
     private String[] basePackages;
-    public HbaseBeanScannerConfigure(String... basePackages){
+    private Configuration conf;
+    public HbaseBeanScannerConfigure(Configuration conf,String... basePackages){
         if( basePackages == null || basePackages.length == 0 ){
             throw new RuntimeException(" basePackages can not be null !!! ");
         }
+        this.conf = conf;
         this.basePackages = basePackages;
     }
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }
+
     public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
-        Configuration conf = HBaseConfiguration.create();
-        conf.set("hbase.zookeeper.quorum", "rongyingjie:2181");
         HbaseConnectionFactory.configuration = conf;
         BeanDefinitionBuilder beanDefinitionBuilder = BeanDefinitionBuilder.rootBeanDefinition(HbaseConnectionFactory.class,"getConnection");
         ConfigurableApplicationContext configurableApplicationContext = (ConfigurableApplicationContext) applicationContext;
@@ -36,4 +37,5 @@ public class HbaseBeanScannerConfigure  implements BeanFactoryPostProcessor, App
         hbaseScanner.setResourceLoader(this.applicationContext);
         hbaseScanner.scan(this.basePackages);
     }
+
 }
