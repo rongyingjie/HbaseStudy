@@ -26,8 +26,9 @@ public class Demo01 {
         List<Cell> cells = result.listCells();
         for (Cell cell :    cells     ) {
             byte[] bytes = CellUtil.cloneValue(cell);
+            String s1 = new String(CellUtil.cloneQualifier(cell));
             String s = new String(bytes);
-            System.out.println(s);
+            System.out.println(s+","+s1);
         }
 
     }

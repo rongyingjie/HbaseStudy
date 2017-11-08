@@ -7,5 +7,5 @@ import java.lang.annotation.*;
 @Documented
 public @interface HbaseColumn {
     String name();
-    String family();
+    String family() default "f1";
 }

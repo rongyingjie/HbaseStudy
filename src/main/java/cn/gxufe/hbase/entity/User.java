@@ -2,13 +2,16 @@ package cn.gxufe.hbase.entity;
 
 import cn.gxufe.hbase.core.HbaseColumn;
 import cn.gxufe.hbase.core.HbaseTable;
+import cn.gxufe.hbase.core.RowKey;
 
 @HbaseTable("user")
 public class User{
-    @HbaseColumn(name = "id",family = "f1")
+    @RowKey
     private String id;
     @HbaseColumn(name = "name",family = "f1")
     private String name;
+    @HbaseColumn(name = "age",family = "f1")
+    private Integer age;
 
     public String getId() {
         return id;
@@ -16,5 +19,31 @@ public class User{
 
     public void setId(String id) {
         this.id = id;
+    }
+
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public Integer getAge() {
+        return age;
+    }
+
+    public void setAge(Integer age) {
+        this.age = age;
+    }
+
+    @Override
+    public String toString() {
+        return "User{" +
+                "id='" + id + '\'' +
+                ", name='" + name + '\'' +
+                ", age=" + age +
+                '}';
     }
 }

@@ -26,7 +26,6 @@ public final class HbaseScanner extends ClassPathBeanDefinitionScanner {
             definition.getPropertyValues().add("className", definition.getBeanClassName());
             definition.setBeanClass(HbaseFactoryBean.class);
         }
-
         return beanDefinitions;
     }
 

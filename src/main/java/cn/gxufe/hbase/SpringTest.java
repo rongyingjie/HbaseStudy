@@ -1,17 +1,21 @@
 package cn.gxufe.hbase;
 
+import cn.gxufe.hbase.entity.User;
 import cn.gxufe.hbase.repository.StudentRepository;
 import cn.gxufe.hbase.repository.UserRepository;
+import cn.gxufe.hbase.service.UserService;
 import cn.gxufe.hbase.spring.HbaseBeanScannerConfigure;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.Connection;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 
 import java.io.IOException;
 
 @Configuration
+@ComponentScan
 public class SpringTest {
 
     @Bean
@@ -26,19 +30,11 @@ public class SpringTest {
 
         AnnotationConfigApplicationContext applicationContext = new AnnotationConfigApplicationContext(SpringTest.class);
 
-        UserRepository userRepository = applicationContext.getBean(UserRepository.class);
+        UserService userService = applicationContext.getBean(UserService.class);
 
-        System.out.println(userRepository);
+        User user = userService.getUserById("1");
 
-        StudentRepository studentRepository = applicationContext.getBean(StudentRepository.class);
-
-        System.out.println(studentRepository);
-
-        Connection connection = applicationContext.getBean(Connection.class);
-
-        System.out.println(connection);
-
-
+        System.out.println(user);
     }
 
 
