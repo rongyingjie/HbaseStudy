@@ -11,10 +11,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.springframework.context.ApplicationContext;
 
 import java.io.Serializable;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class HbaseCurlRepositoryImpl implements InvocationHandler ,HbaseCurlRepository{
     private Class entityClass;
@@ -24,19 +24,25 @@ public class HbaseCurlRepositoryImpl implements InvocationHandler ,HbaseCurlRepo
     private HashMap<String,String> familys = null;
     private Class interInterface;
     private ApplicationContext applicationContext;
+    private Class customImpl = null;
+
+    private HashMap<String,Method> customImplMethod = new HashMap<>(0);
+    private HashMap<String,Object> customImplBean = new HashMap<>(0);
 
     private String rowKeyName = null;
 
     public HbaseCurlRepositoryImpl(Class interInterface,ApplicationContext applicationContext){
         this.interInterface = interInterface;
         this.applicationContext = applicationContext;
+        HbaseRepository annotation = (HbaseRepository)this.interInterface.getAnnotation(HbaseRepository.class);
+        this.customImpl = annotation.customImpl();
         Type[] genericInterfaces = interInterface.getGenericInterfaces();
         if(genericInterfaces == null || genericInterfaces.length == 0){
-            throw new HbaseExecption(" Repository 必须配置ID和实体的泛型参数 ");
+            throw new HbaseExecption(" Repository 必须实体的泛型参数 ");
         }
         Type[] actualTypeArguments = ((ParameterizedType) genericInterfaces[0]).getActualTypeArguments();
         if(actualTypeArguments == null || actualTypeArguments.length != 1 ){
-            throw new HbaseExecption(" Repository 必须配置ID和实体的泛型参数 ");
+            throw new HbaseExecption(" Repository 必须实体的泛型参数 ");
         }
         entityClass = (Class) actualTypeArguments[0];
         this.init();
@@ -69,6 +75,28 @@ public class HbaseCurlRepositoryImpl implements InvocationHandler ,HbaseCurlRepo
                 familys.put(name,hbaseColumn.family());
             }
         }
+
+        if( this.customImpl != HbaseCurlRepository.class ){
+            Object bean = this.applicationContext.getBean(this.customImpl);
+            Class aClass = bean.getClass();
+            Method[] interInterfaceMethods = this.interInterface.getMethods();
+            if( interInterfaceMethods != null && interInterfaceMethods.length > 0 ){
+                for (Method m  :  interInterfaceMethods ) {
+                    Method method = null;
+                    Class[] genericParameterTypes = m.getParameterTypes();
+                    String methodName = m.getName();
+                    try {
+                        method = aClass.getDeclaredMethod(methodName, genericParameterTypes);
+                    } catch (NoSuchMethodException e) {
+
+                    }
+                    if(method != null){
+                        customImplMethod.put(m.getName(),method);
+                        customImplBean.put(m.getName(),bean);
+                    }
+                }
+            }
+        }
     }
 
 
@@ -85,6 +113,19 @@ public class HbaseCurlRepositoryImpl implements InvocationHandler ,HbaseCurlRepo
 
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
         String name = method.getName();
+        Method customMethod= this.customImplMethod.get(name);
+        if(customMethod != null ){
+            Connection connection = applicationContext.getBean(Connection.class);
+            Table table = connection.getTable(TableName.valueOf(this.tableName));
+            HbaseTableUtils.setTable(table);
+            try {
+                return customMethod.invoke( this.customImplBean.get(name),args);
+            }catch (Exception e){
+                throw new RuntimeException(e);
+            }finally {
+                table.close();
+            }
+        }
         switch (name) {
             case "getById":
                 return getById((Serializable)args[0]);
@@ -98,6 +139,9 @@ public class HbaseCurlRepositoryImpl implements InvocationHandler ,HbaseCurlRepo
                 return null;
             case "findFromStartToEndRowKey":
                return findFromStartToEndRowKey( args[0].toString(),args[1].toString());
+            default:
+                System.out.println("default");
+                   break;
         }
         if(method.getName().equals("toString")){
             return this.toString();
@@ -120,7 +164,6 @@ public class HbaseCurlRepositoryImpl implements InvocationHandler ,HbaseCurlRepo
             String row = new String(result.getRow());
             Method[] methods = this.methods.get(this.rowKeyName);
             methods[1].invoke(entity,row);
-
             List<Cell> cells = result.listCells();
             for (Cell cell :    cells     ) {
                 byte[] bytes = CellUtil.cloneValue(cell);

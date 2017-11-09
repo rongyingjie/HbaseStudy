@@ -30,11 +30,18 @@ public class SpringTest {
 
         AnnotationConfigApplicationContext applicationContext = new AnnotationConfigApplicationContext(SpringTest.class);
 
-        UserService userService = applicationContext.getBean(UserService.class);
+//        UserService userService = applicationContext.getBean(UserService.class);
+//
+//        User user = userService.getUserById("1");
+//
+//        System.out.println(user);
+//
+          StudentRepository studentRepository = applicationContext.getBean(StudentRepository.class);
+//
 
-        User user = userService.getUserById("1");
+        System.out.println(studentRepository.getStudentByName("abc"));
 
-        System.out.println(user);
+
     }
 
 

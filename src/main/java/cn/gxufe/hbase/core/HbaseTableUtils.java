@@ -3,11 +3,11 @@ package cn.gxufe.hbase.core;
 import org.apache.hadoop.hbase.client.Table;
 
 public final class HbaseTableUtils {
-    private ThreadLocal<Table> tableThreadLocal = new ThreadLocal<Table>();
-    protected void setTable(Table table){
+    private static ThreadLocal<Table> tableThreadLocal = new ThreadLocal<Table>();
+    protected  static  void setTable(Table table){
         tableThreadLocal.set(table);
     }
-    public Table getTable(){
+    public static Table getTable(){
         return tableThreadLocal.get();
     }
 }

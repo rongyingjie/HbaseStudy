@@ -7,4 +7,5 @@ import java.lang.annotation.*;
 @Documented
 public @interface HbaseRepository {
    boolean singleton() default true;
+   Class customImpl() default HbaseCurlRepository.class;
 }
