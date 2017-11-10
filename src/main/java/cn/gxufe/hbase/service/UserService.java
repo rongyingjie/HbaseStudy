@@ -15,4 +15,8 @@ public class UserService {
        return hbaseCurlRepository.getById(id);
     }
 
+    public User deleteById(String id){
+        return hbaseCurlRepository.deleteById(id);
+    }
+
 }

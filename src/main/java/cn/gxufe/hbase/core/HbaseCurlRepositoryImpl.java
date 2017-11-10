@@ -3,20 +3,20 @@ package cn.gxufe.hbase.core;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.springframework.context.ApplicationContext;
 
+import java.io.IOException;
 import java.io.Serializable;
-import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
-public class HbaseCurlRepositoryImpl implements InvocationHandler ,HbaseCurlRepository{
+public class HbaseCurlRepositoryImpl implements InvocationHandler ,HbaseCurlRepository {
+
     private Class entityClass;
     private String tableName;
     private HashMap<String,Method[]> methods = null;
@@ -25,6 +25,7 @@ public class HbaseCurlRepositoryImpl implements InvocationHandler ,HbaseCurlRepo
     private Class interInterface;
     private ApplicationContext applicationContext;
     private Class customImpl = null;
+    private Connection connection;
 
     private HashMap<String,Method> customImplMethod = new HashMap<>(0);
     private HashMap<String,Object> customImplBean = new HashMap<>(0);
@@ -75,7 +76,6 @@ public class HbaseCurlRepositoryImpl implements InvocationHandler ,HbaseCurlRepo
                 familys.put(name,hbaseColumn.family());
             }
         }
-
         if( this.customImpl != HbaseCurlRepository.class ){
             Object bean = this.applicationContext.getBean(this.customImpl);
             Class aClass = bean.getClass();
@@ -114,34 +114,44 @@ public class HbaseCurlRepositoryImpl implements InvocationHandler ,HbaseCurlRepo
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
         String name = method.getName();
         Method customMethod= this.customImplMethod.get(name);
+        if(this.connection == null){
+            this.connection = applicationContext.getBean(Connection.class);
+        }
+        Table table = connection.getTable(TableName.valueOf(this.tableName));
+        HbaseTableUtils.setTable(table);
         if(customMethod != null ){
-            Connection connection = applicationContext.getBean(Connection.class);
-            Table table = connection.getTable(TableName.valueOf(this.tableName));
-            HbaseTableUtils.setTable(table);
             try {
                 return customMethod.invoke( this.customImplBean.get(name),args);
             }catch (Exception e){
                 throw new RuntimeException(e);
             }finally {
                 table.close();
+                HbaseTableUtils.pop();
             }
         }
-        switch (name) {
-            case "getById":
-                return getById((Serializable)args[0]);
-            case "deleteById":
-                return deleteById((Serializable)args[0]);
-            case "save":
-                save(args[0]);
-                return null;
-            case "saveBatch":
-                saveBatch((List) args[0]);
-                return null;
-            case "findFromStartToEndRowKey":
-               return findFromStartToEndRowKey( args[0].toString(),args[1].toString());
-            default:
-                System.out.println("default");
-                   break;
+        try {
+            switch (name) {
+                case "getById":
+                    return getById((Serializable)args[0]);
+                case "deleteById":
+                    return deleteById((Serializable)args[0]);
+                case "save":
+                    save(args[0]);
+                    return null;
+                case "saveBatch":
+                    saveBatch((List) args[0]);
+                    return null;
+                case "findFromStartToEndRowKey":
+                    return findFromStartToEndRowKey( args[0].toString(),args[1].toString());
+                default:
+                    System.out.println("default");
+                    break;
+            }
+        }catch (Exception e){
+            throw  new RuntimeException(e);
+        }finally {
+            table.close();
+            HbaseTableUtils.pop();
         }
         if(method.getName().equals("toString")){
             return this.toString();
@@ -150,71 +160,122 @@ public class HbaseCurlRepositoryImpl implements InvocationHandler ,HbaseCurlRepo
     }
 
     public Object getById(Serializable id) {
-        Connection connection = applicationContext.getBean(Connection.class);
-        Object entity;
-        Table table = null;
+        Table table = HbaseTableUtils.getTable();
         try {
-            table = connection.getTable(TableName.valueOf(this.tableName));
-            entity = entityClass.newInstance();
             Get get = new Get(id.toString().getBytes());
             Result result = table.get(get);
-            if(result == null){
+            if(result == null || result.isEmpty()){
                 return null;
             }
-            String row = new String(result.getRow());
-            Method[] methods = this.methods.get(this.rowKeyName);
-            methods[1].invoke(entity,row);
-            List<Cell> cells = result.listCells();
-            for (Cell cell :    cells     ) {
-                byte[] bytes = CellUtil.cloneValue(cell);
-                String fname = new String(CellUtil.cloneQualifier(cell));
-                Class aClass = this.fieldsType.get(fname);
-                if(aClass == null){
-                    continue;
-                }
-                Object value=null;
-                Method[] method = this.methods.get(fname);
-                switch (aClass.getName()){
-                    case "java.lang.String":
-                        value = new String(bytes);
-                        break;
-                    case "java.lang.Integer":
-                        value = Bytes.toInt(bytes);
-                        break;
-                }
-                method[1].invoke(entity,value);
-            }
+            return resultToObject(result);
         } catch (Exception e) {
-            throw new RuntimeException(e);
-        }finally {
-            this.closeTable(table);
-        }
-        return entity;
-    }
-
-    private void closeTable( Table table ){
-        try {
-            if( table != null){
-                table.close();
-            }
-        }catch (Exception e){
             throw new RuntimeException(e);
         }
     }
 
     public Object deleteById(Serializable id) {
-        return null;
+        Table table = HbaseTableUtils.getTable();
+        Object result = this.getById(id);
+        if( result == null ){
+            return null;
+        }
+        Delete delete = new Delete(Bytes.toBytes(id.toString()));
+        try {
+            table.delete(delete);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return result;
     }
 
     public void save(Object o) {
-
+        Table table = HbaseTableUtils.getTable();
+        Put put;
+        try {
+            put = entityToPut(o);
+            table.put(put);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public void saveBatch(List list) {
-
+        Table table = HbaseTableUtils.getTable();
+        List<Put> puts = new ArrayList<>(list.size());
+        for (Object obj : list){
+            try {
+                puts.add(entityToPut(obj));
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+        try {
+            table.put(puts);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public List findFromStartToEndRowKey(String startRowKey, String endRowKey) {
         return null;
     }
+
+    private Put entityToPut(Object entity) throws IllegalAccessException, InstantiationException, InvocationTargetException {
+        Method[] rowMethods = this.methods.get(this.rowKeyName);
+        Object rowkeyValue = rowMethods[0].invoke(entity);
+        if(rowkeyValue == null){
+            throw new RuntimeException("rowkey value is null !!!");
+        }
+        Put put = new Put(rowkeyValue.toString().getBytes());
+        for (Map.Entry<String,Method[]> m : this.methods.entrySet()   ) {
+            if( this.rowKeyName.equals(m.getKey()) ){
+                continue;
+            }
+            try {
+                Object value = m.getValue()[0].invoke(entity);
+                if(value == null){
+                    continue;
+                }
+                Class aClass = this.fieldsType.get(m.getKey());
+                String family = this.familys.get(m.getKey());
+                if( aClass == Integer.class ){
+                    put.addColumn(family.getBytes(),m.getKey().getBytes(),Bytes.toBytes((Integer)value));
+                }else if( aClass == String.class ) {
+                    put.addColumn(family.getBytes(),m.getKey().getBytes(),value.toString().getBytes());
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return put;
+    }
+    private Object resultToObject(Result result) throws IllegalAccessException, InstantiationException, InvocationTargetException {
+        Object entity = entityClass.newInstance();
+        String row = new String(result.getRow());
+        Method[] methods = this.methods.get(this.rowKeyName);
+        methods[1].invoke(entity,row);
+        List<Cell> cells = result.listCells();
+        for (Cell cell :    cells     ) {
+            byte[] bytes = CellUtil.cloneValue(cell);
+            String fname = new String(CellUtil.cloneQualifier(cell));
+            Class aClass = this.fieldsType.get(fname);
+            if(aClass == null){
+                continue;
+            }
+            Object value=null;
+            Method[] method = this.methods.get(fname);
+            switch (aClass.getName()){
+                case "java.lang.String":
+                    value = new String(bytes);
+                    break;
+                case "java.lang.Integer":
+                    value = Bytes.toInt(bytes);
+                    break;
+            }
+            method[1].invoke(entity,value);
+        }
+        return entity;
+
+    }
+
 }
