@@ -40,7 +40,7 @@ import java.io.IOException;
  *      4、协处理器：
  *          实现案例：KafkaRegionObserver
  *          利用prePut,postPut,preDelete 监控 hbase 的 curd
- *
+ *          将数据写入solr或者es,构建索引，查询到rowKey后 再到hbase查询完整数据
  */
 public class UserIndexMap {
     public static void main(String[] args) throws IOException, ClassNotFoundException, InterruptedException {
