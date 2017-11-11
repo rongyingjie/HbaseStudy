@@ -31,6 +31,16 @@ import java.io.IOException;
  *      bin/hbase cn.gxufe.hbase.secondary.index.UserIndexMap user
  *
  *
+ * 二级索引构建方案 ：
+ *      1、map reduce 实现
+ *      2、IHbase
+ *          利用数据刷到磁盘的过程，构建索引
+ *      3、ITHbase
+ *
+ *      4、协处理器：
+ *          实现案例：KafkaRegionObserver
+ *          利用prePut,postPut,preDelete 监控 hbase 的 curd
+ *
  */
 public class UserIndexMap {
     public static void main(String[] args) throws IOException, ClassNotFoundException, InterruptedException {
