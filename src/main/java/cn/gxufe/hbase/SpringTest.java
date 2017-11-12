@@ -1,6 +1,7 @@
 package cn.gxufe.hbase;
 
 import cn.gxufe.hbase.core.HbaseTableUtils;
+import cn.gxufe.hbase.entity.Student;
 import cn.gxufe.hbase.entity.User;
 import cn.gxufe.hbase.repository.StudentRepository;
 import cn.gxufe.hbase.repository.UserRepository;
@@ -32,30 +33,18 @@ public class SpringTest {
 
         AnnotationConfigApplicationContext applicationContext = new AnnotationConfigApplicationContext(SpringTest.class);
 
-//        UserService userService = applicationContext.getBean(UserService.class);
-//
-//
 //        UserRepository userRepository = applicationContext.getBean(UserRepository.class);
 //
 //
-//        userRepository.save(new User("1","zhangsan",20));
-//
-//
-//        User user = userService.getUserById("1");
-//
-//        System.out.println(user);
+//        userRepository.save(new User("4","zhanliu",30));
+
 
 
         StudentRepository studentRepository = applicationContext.getBean(StudentRepository.class);
 
-        studentRepository.getStudentByName("a");
-
-        Table table = HbaseTableUtils.getTable();
-
-        System.out.println(table);
-
-        //        StudentRepository studentRepository = applicationContext.getBean(StudentRepository.class);
+        studentRepository.save(new Student("3","zhangsan"));
 //
+
 
     //    System.out.println(studentRepository.getStudentByName("abc"));
 

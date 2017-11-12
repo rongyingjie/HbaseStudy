@@ -26,4 +26,12 @@ public class Student {
     public void setName(String name) {
         this.name = name;
     }
+
+
+    public Student(){}
+
+    public Student(String id, String name) {
+        this.id = id;
+        this.name = name;
+    }
 }

@@ -10,10 +10,7 @@ import org.springframework.context.ApplicationContext;
 import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class HbaseCurlRepositoryImpl implements InvocationHandler ,HbaseCurlRepository {
 
@@ -143,9 +140,10 @@ public class HbaseCurlRepositoryImpl implements InvocationHandler ,HbaseCurlRepo
                     return null;
                 case "findFromStartToEndRowKey":
                     return findFromStartToEndRowKey( args[0].toString(),args[1].toString());
+                case "toString":
+                    return this.toString();
                 default:
-                    System.out.println("default");
-                    break;
+                  throw  new HbaseExecption(this.interInterface.getSimpleName() +  " method = " + name+" not impl !!!");
             }
         }catch (Exception e){
             throw  new RuntimeException(e);
@@ -153,10 +151,6 @@ public class HbaseCurlRepositoryImpl implements InvocationHandler ,HbaseCurlRepo
             table.close();
             HbaseTableUtils.pop();
         }
-        if(method.getName().equals("toString")){
-            return this.toString();
-        }
-        return null;
     }
 
     public Object getById(Serializable id) {
@@ -217,7 +211,20 @@ public class HbaseCurlRepositoryImpl implements InvocationHandler ,HbaseCurlRepo
     }
 
     public List findFromStartToEndRowKey(String startRowKey, String endRowKey) {
-        return null;
+        Table table = HbaseTableUtils.getTable();
+        Scan scan = new Scan();
+        scan.setStartRow(startRowKey.getBytes());
+        scan.setStopRow(endRowKey.getBytes());
+        try {
+            ResultScanner scanner = table.getScanner(scan);
+            List rs = new LinkedList();
+            for (Result item : scanner   ) {
+                rs.add(resultToObject(item));
+            }
+            return rs;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private Put entityToPut(Object entity) throws IllegalAccessException, InstantiationException, InvocationTargetException {
