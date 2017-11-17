@@ -1,7 +1,7 @@
 # HbaseStudy 包含的内容
  - hbase 基本的crud
  - <a href="https://github.com/rongyingjie/HbaseStudy/blob/master/src/main/java/cn/gxufe/hbase/secondary/index/UserIndexMap.java">hbase与map reduce 整合(二级索引构建)</a>
- - hbase的协处理器，监控curd,再将数据写入kafka(也可以es等)
+ - <a href="https://github.com/rongyingjie/HbaseStudy/blob/master/src/main/java/cn/gxufe/hbase/secondary/index/UserIndexMap.java">hbase的协处理器，监控curd,再将数据写入kafka(也可以es等)</a>
  - hbase的spring整合，手动实现类似spring data的功能，自定义注解和包扫描创建repository
 
 # Hbase的rowkey设计
