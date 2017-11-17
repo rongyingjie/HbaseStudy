@@ -1,6 +1,6 @@
 # HbaseStudy 包含的内容
  - hbase 基本的crud
- - hbase与map reduce 整合 
+ - <a href="https://github.com/rongyingjie/HbaseStudy/blob/master/src/main/java/cn/gxufe/hbase/secondary/index/UserIndexMap.java">hbase与map reduce 整合(二级索引构建)</a>
  - hbase的协处理器，监控curd,再将数据写入kafka(也可以es等)
  - hbase的spring整合，手动实现类似spring data的功能，自定义注解和包扫描创建repository
 
@@ -9,3 +9,4 @@
  - 按照rowkey存储，那么每个区间的数据量和读写频率，就会直接影响性能，尽可能的保证每个区间的数据量相差不大
  - 表的创建，默认是不会只有一个region,也可以自定义预分区
  - hbase的负载均衡，后台的守护进程会定时扫描表的大小，决定是否会分裂region
+
